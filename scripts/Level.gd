@@ -17,7 +17,7 @@ func update_camera():
 	if (camera_position.y > player.position.y):
 		var difference = int(round(camera_position.y - player.position.y))
 		utils.emit_signal("camera_elevated", difference)
-		PlatformPointer.on_camera_elevation(difference)
+		#PlatformPointer.on_camera_elevation(difference)
 		camera_position.y = player.position.y
 	
 	var movement = -camera_position + screen_size / 2

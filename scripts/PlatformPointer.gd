@@ -8,9 +8,9 @@ onready var parent = get_parent()
 var previous_elevation = 80
 var difficulty_level = 1
 
-func _ready():
-	position.y -= 70
-	on_camera_elevation(400)
+#func _ready():
+#	position.y -= 70
+#	on_camera_elevation(400)
 
 func on_camera_elevation(amount):
 	var levels_to_rise = determine_levels(amount)
