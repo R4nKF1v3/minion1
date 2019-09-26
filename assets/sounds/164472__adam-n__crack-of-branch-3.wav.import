@@ -1,0 +1,21 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/164472__adam-n__crack-of-branch-3.wav-57f584d81cf596a1c68fff3dd51a7468.sample"
+
+[deps]
+
+source_file="res://assets/sounds/164472__adam-n__crack-of-branch-3.wav"
+dest_files=[ "res://.import/164472__adam-n__crack-of-branch-3.wav-57f584d81cf596a1c68fff3dd51a7468.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=true
+edit/normalize=true
+edit/loop=false
+compress/mode=0

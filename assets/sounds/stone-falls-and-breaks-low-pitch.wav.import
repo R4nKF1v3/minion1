@@ -1,0 +1,21 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/stone-falls-and-breaks-low-pitch.wav-38b769e10013b7547e85de1e848e7eac.sample"
+
+[deps]
+
+source_file="res://assets/sounds/stone-falls-and-breaks-low-pitch.wav"
+dest_files=[ "res://.import/stone-falls-and-breaks-low-pitch.wav-38b769e10013b7547e85de1e848e7eac.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=true
+edit/normalize=true
+edit/loop=false
+compress/mode=0

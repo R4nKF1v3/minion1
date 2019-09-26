@@ -1,153 +1,125 @@
 extends KinematicBody2D
 
-export (bool) var is_player = true
+export var ACCELERATION = 200
+export var MAX_V_SPEED = 1200
+export var JUMP_FORCE = 400
+export var GRAVITY = 10
+export var RAY_VECTORS = [Vector2(0, -25), Vector2(-5, -25), Vector2(5, -25)]
+
 onready var vis_notifier = $VisibilityNotifier2D
 onready var RAY_NODE = $RayCast2D
+onready var COLL_BOX = $CollisionShape2D
+onready var anim_player = $Body/Character/AnimationPlayer
+onready var timer = $Timer
 
-const ACCELERATION = 10
-const DECELERATION = 5
-const MAX_HORIZONTAL_SPEED = 200
-const JUMP_FORCE = 400
-const GRAVITY = 10
 const FLOOR_NORMAL = Vector2(0, -1)
-const UP_RAY_VECTORS = [Vector2(0, -50), Vector2(-5, -48), Vector2(5, -48)]
-const DOWN_RAY_VECTORS = [Vector2(0, 15), Vector2(5, 15), Vector2(-5, 15)]
-const LATERAL_RAY_VECTORS = [Vector2(15, 0), Vector2(-15, 0)]
 
-var direction = 0
-var input_direction = 0
 var is_ready = 0
-var h_mov_timer = 0
 var velocity = Vector2()
 var accumulated_speed = 0
+var active_powers = {}
+var extra_life = false
+var ledge_collider = null
 
 var started = false
 
-#func _ready():
-#	utils.connect("player_in_platform", self, "slow_speed")
+func _ready():
+	utils.connect("game_started", self, "on_game_start")
+	timer.start()
 
-func _physics_process(delta):
-	if not vis_notifier.is_on_screen():
-		get_tree().reload_current_scene()
-	match started:
-		true:
-			process_movement()
-		false:
-			if Input.is_action_just_pressed("jump"):
-				started = true
-
-func process_movement():
-	### User input check, preserves old direction if the user input was 0 in the previous frame
-	if input_direction:
-        direction = input_direction
-	
-	### Input loop
-	input_loop()
-	
-	### Idle loop (Always executes)
-	idle_loop()
-	
-	### Gravity... cuz gravity
-	velocity.y += GRAVITY
-	
-	var temp_vel = velocity
-	
-	velocity = move_and_slide(velocity, FLOOR_NORMAL)
-	
-	for i in get_slide_count():
-		var coll = get_slide_collision(i).normal
-		if temp_vel.y < -JUMP_FORCE && coll == FLOOR_NORMAL:
-			print("Am i hitting a ceiling?")
-			print(is_on_ceiling())
-			print("Am i hitting a floor?")
-			print(is_on_floor())
-			print("My hitting speed is:")
-			print(temp_vel)
-			print("My leftover speed is:")
-			print(velocity)
-			print(coll)
+func on_game_start():
+	started = true
 
 ### Input loop, determines the different input conditions and responses, 
 ### and the default response if there wasn't any valid input
-func input_loop():
-	if Input.is_action_just_pressed("jump"):
-		jump_loop()
-	elif Input.is_action_pressed("ui_right") and h_mov_timer == 0:
-		input_direction = 1
-		velocity.x = min(velocity.x + ACCELERATION, MAX_HORIZONTAL_SPEED)
-	elif Input.is_action_pressed("ui_left") and h_mov_timer == 0:
-		input_direction = -1 
-		velocity.x = max(velocity.x - ACCELERATION, -MAX_HORIZONTAL_SPEED)
-	else:
-		input_direction = 0
-		velocity.x += -direction * min(DECELERATION, abs(velocity.x))
-
-### Conditions for the jump input
-func jump_loop():
-	if is_on_floor() and is_ready > 10:
-		accumulated_speed = JUMP_FORCE
-	elif determine_jump_element(UP_RAY_VECTORS):
-		velocity.y -= JUMP_FORCE
-	elif determine_jump_element(DOWN_RAY_VECTORS):
-		velocity.y -= JUMP_FORCE
-	elif determine_jump_element(LATERAL_RAY_VECTORS):
-		var col_normal = RAY_NODE.get_collision_normal()
-		velocity = Vector2(200 * col_normal.x, -JUMP_FORCE)
-		direction = col_normal.x
-		h_mov_timer = 20
-
-### Idle loop with conditions that are always automatically checked
-func idle_loop():
-	if input_direction == - direction:
-		velocity.x /= 3
-	if h_mov_timer > 0:
-		h_mov_timer -= 1
-	autojump()
-
-### Helper function that checks for the autojump cycle
-func autojump():
-	if is_ready == 20:
-		velocity.y -= (JUMP_FORCE * 4 )#+ accumulated_speed)
-		is_ready = 0
-		accumulated_speed = 0
-		print("Autojump executing")
+func _handle_move_input():
+	var move_direction = - int(Input.is_action_pressed("ui_left")) + int(Input.is_action_pressed("ui_right"))
+	velocity.x = lerp(velocity.x, ACCELERATION * move_direction, 0.2)
+	if move_direction != 0:
+		$Body.scale.x = move_direction
 	
-	if is_ready < 20 && is_on_floor() && velocity.y >= 0:
-		print("Autojump charging")
-		print("Because:")
-		print("Is_ready: %d" %is_ready)
-		print("Is_on_floor:" + str(is_on_floor()))
-		print("velocity.y: %d" %velocity.y)
-		is_ready += 1
-		velocity.x = 0
+func _apply_gravity():
+	### Gravity... cuz gravity
+	velocity.y += GRAVITY
+	
+func _apply_movement():
+	velocity.y = max(-MAX_V_SPEED ,velocity.y)
+	
+	### Collision layer change to ascend and descend
+	_collision_change()
+	
+	velocity = move_and_slide(velocity, FLOOR_NORMAL)
+	for i in get_slide_count():
+		var collision = get_slide_collision(i)
+		collision.collider.player_standing()
+	
 
-### Raycast function that determines if there was any collision for the raycast projection
-### returning bool and preserving the raycast state for future use
-func determine_jump_element(vector_list) -> bool:
+func _collision_change():
+	if is_ascending():
+		set_collision_layer_bit(0, false)
+		set_collision_layer_bit(1, true)
+		set_collision_mask_bit(0, false)
+		set_collision_mask_bit(1, true)
+	else:
+		set_collision_layer_bit(0, true)
+		set_collision_layer_bit(1, false)
+		set_collision_mask_bit(0, true)
+		set_collision_mask_bit(1, false)
+
+func is_ascending() -> bool:
+	return velocity.y < 0
+
+
+func determine_jump_element() -> bool:
 	var result = null
 	var index = 0
-	while vector_list.size() != index and result == null:
-		var vector = vector_list[index]
+	while RAY_VECTORS.size() != index and result == null:
+		var vector = RAY_VECTORS[index]
 		result = raycast_query(vector)
 		index += 1
-	return result != null and result.is_jumpable
+	return result != null and result.get_parent().is_jumpable
 
-### Helper function that checks collision with the raycast for a given objective vector
 func raycast_query(vector):
 	RAY_NODE.cast_to = vector
 	RAY_NODE.force_raycast_update()
 	return RAY_NODE.get_collider()
-	
 
 
+## Standard jump function
+func jump(collision_element, jump_speed):
+	velocity.y -= jump_speed
+	collision_element.player_did_jump()
+	#utils.emit_signal("player_jumped")
 
 
+## Powerups
+func _process_powerups():
+	for key in active_powers:
+		if active_powers[key] == 0:
+			eliminate_power(key)
+			active_powers[key] = - 1
+		elif active_powers[key] > 0:
+			active_powers[key] -= 1
 
+func get_powerup(pwr, time):
+	set_power(pwr, time)
+	match pwr:
+		utils.powers.superjump:
+			JUMP_FORCE = 600
+		utils.powers.extralife:
+			extra_life = true
+	utils.emit_signal("power_grabbed", pwr, time)
 
+func set_power(pwr, time):
+	active_powers[pwr] = time
 
-
-
-
+func eliminate_power(pwr):
+	match pwr:
+		utils.powers.superjump:
+			JUMP_FORCE = 400
+		utils.powers.extralife:
+			extra_life = false
+	utils.emit_signal("power_expired", pwr)
 
 
 

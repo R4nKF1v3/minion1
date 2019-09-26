@@ -8,15 +8,20 @@
 
 config_version=4
 
-_global_script_classes=[  ]
+_global_script_classes=[ {
+"base": "Node",
+"class": "StateMachine",
+"language": "GDScript",
+"path": "res://scripts/StateMachine.gd"
+} ]
 _global_script_class_icons={
-
+"StateMachine": ""
 }
 
 [application]
 
 config/name="Minion 1"
-run/main_scene="res://scenes/Level.tscn"
+run/main_scene="res://scenes/Main.tscn"
 config/icon="res://icon.png"
 
 [autoload]
@@ -25,8 +30,8 @@ utils="*res://scripts/utils.gd"
 
 [display]
 
-window/size/width=405
-window/size/height=720
+window/size/width=180
+window/size/height=320
 window/size/test_width=1280
 window/size/test_height=720
 window/stretch/mode="2d"
